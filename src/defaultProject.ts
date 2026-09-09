@@ -2,11 +2,12 @@ import type {Project} from "./types";
 export const defaultProject:Project={
   title:"الخريطة التشغيلية الشاملة",
   subtitle:"العمليات الرئيسية، نقاط القرار، مسارات الاستيفاء، والجهات المشاركة",
-  theme:{pageSize:"16:9",fontFamily:"Arial",mainBlue:"#15479C",teal:"#078A97",processFill:"#EAF2FB",decisionFill:"#FFF3CD",exceptionFill:"#FDECEA",startEndFill:"#E7F6EA"},
+  theme:{name:"reference",pageSize:"16:9"},
   departments:[{
     id:"cash-reimbursement",name:"إدارة الاسترداد النقدي",subtitle:"Cross-Functional Flowchart",sourcePages:"4-10",
     panels:[{
       id:"contributions",title:"1. المساهمات",accent:"blue",
+      canvasWidth:640,canvasHeight:720,
       lanes:[
         {id:"emp",name:"الموظف / مقدم الطلب"},
         {id:"maker",name:"إدارة الاسترداد النقدي - Maker"},
