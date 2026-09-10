@@ -100,6 +100,50 @@ summary{cursor:pointer;font-weight:700;color:#0B2A58}
 .popout-modal{position:relative;background:#fff;border-radius:12px;width:min(1400px,96vw);height:min(900px,92vh);overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column}
 .popout-close{position:absolute;top:10px;left:10px;z-index:10;padding:6px 10px;background:#fff;border-radius:7px}
 
+/* ---- Export slide (presentation-only render, never shown in the editor) ---- */
+.export-stage{position:absolute;left:-20000px;top:0;pointer-events:none;z-index:-1}
+.xslide{background:#fff;color:#17365D;box-sizing:border-box;display:flex;flex-direction:column;position:relative}
+.xslide-masthead{display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0}
+.xslide-masthead-label{font-size:15px;font-weight:800;letter-spacing:.06em;color:#5F7190;padding-top:10px}
+.xslide-masthead-title{text-align:right}
+.xslide-t1{font-size:30px;font-weight:800;color:#0B2A58;line-height:1.2}
+.xslide-t2{font-size:14px;color:#7C8AA0;margin-top:4px}
+.xslide-rule{border-top:1px solid #CDD7E3;margin:6px 0 0;flex-shrink:0}
+.xslide-title{display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0}
+.xslide-dept{font-size:32px;font-weight:800;color:#0B2A58}
+.xslide-dept-sub{font-size:15px;color:#7C8AA0;margin-top:4px}
+
+.xslide-panels{display:flex;align-items:stretch;flex-shrink:0}
+.xslide-panel{border:1px solid #C4D0DE;border-radius:10px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.xslide-panel-head{color:#fff;font-size:19px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.xslide-panel-body{position:relative;overflow:hidden}
+.xslide-lane-row{position:absolute;left:0;right:0;border-bottom:1px solid #E4EAF1}
+.xslide-lane-row:last-child{border-bottom:none}
+.xslide-lane-flow{position:absolute;top:0;height:100%}
+.xslide-lane-label{position:absolute;top:0;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:6px;text-align:center;font-size:13px;font-weight:700;color:#124B91;background:#F8FAFC;border-left:1px solid #E4EAF1;box-sizing:border-box}
+.xslide-lane-label svg{color:#124B91}
+.xslide-edges{position:absolute;left:0;top:0}
+.xslide-node{position:absolute;border:2px solid;border-radius:8px;display:flex;align-items:center;justify-content:center;
+  text-align:center;font-size:13px;font-weight:700;color:#17365D;padding:4px;line-height:1.25;box-sizing:border-box}
+.xslide-node.pill{border-radius:999px}
+.xslide-node.diamond{border-radius:4px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.xslide-node-line{display:block}
+.xslide-edge-label{position:absolute;transform:translate(-50%,-50%);background:#fff;border:1px solid #cbd5e1;border-radius:4px;
+  padding:1px 6px;font-size:12px;font-weight:700;color:#334155;white-space:nowrap}
+.xslide-edge-label.x{border-color:#EF2B2D;color:#C81E1E}
+
+.xslide-legend{display:flex;align-items:center;justify-content:center;gap:26px;border:1px dashed #cbd5e1;border-radius:8px;
+  margin-top:14px;flex-shrink:0}
+.xslide-lg{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:#334155;white-space:nowrap}
+.xslide-lg .sw{width:26px;height:15px;border:2px solid;display:inline-block;flex-shrink:0}
+.xslide-lg .sw.pill{border-radius:999px}
+.xslide-lg .sw.rect{border-radius:4px}
+.xslide-lg .sw.dia{width:17px;height:17px;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.xslide-footer{display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;margin-top:8px;flex-shrink:0}
+.xslide-note{flex:1;text-align:center}
+.xslide-page{font-weight:700;color:#64748B}
+
 .json-diff-preview{background:#EAF2FB;border:1px solid #9fb3c8;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12px}
 .json-diff-preview p{margin:0 0 4px;font-weight:700;color:#0B2A58}
 .json-diff-preview ul{margin:0;padding-right:18px}

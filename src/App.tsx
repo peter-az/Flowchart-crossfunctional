@@ -11,6 +11,7 @@ import {validateProject, type ValidationIssue} from "./validate";
 import {resolveTheme, THEME_LABELS} from "./themes";
 import PanelCanvas from "./flow/PanelCanvas";
 import LegendBar from "./flow/LegendBar";
+import SlideView from "./export/SlideView";
 import "./styles.css";
 
 let uid=1;
@@ -49,8 +50,11 @@ export default function App(){
   const [docxJsonText,setDocxJsonText]=useState("");
   const [exporting,setExporting]=useState<string|null>(null);
   const [poppedPanelId,setPoppedPanelId]=useState<string|null>(null);
+  /** which department the offscreen export slide currently renders (defaults to the selected one) */
+  const [exportDeptIdx,setExportDeptIdx]=useState<number|null>(null);
 
   const deptCanvasRef=useRef<HTMLDivElement|null>(null);
+  const exportStageRef=useRef<HTMLDivElement|null>(null);
 
   const dept=project.departments[Math.min(selectedDept,project.departments.length-1)];
   const theme=resolveTheme(project.theme);
@@ -200,16 +204,31 @@ export default function App(){
     finally{ setExporting(null); }
   }
 
+  const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+
+  /**
+   * The slide itself, not the offscreen wrapper: html-to-image clones the target's own
+   * computed styles, so capturing the wrapper (which is parked far off-canvas) yields a blank image.
+   */
+  function slideEl(){
+    const el=exportStageRef.current?.querySelector(".xslide");
+    if(!el) throw new Error("export slide not mounted");
+    return el as HTMLElement;
+  }
+
+  /** Renders the clean export slide for one department offscreen, then captures it. */
+  async function captureSlide(deptIndex:number){
+    setExportDeptIdx(deptIndex);
+    await nextFrame();
+    return capturePngDataUrl(slideEl());
+  }
+
   async function captureAllDepartmentImages(){
-    const root=deptCanvasRef.current; if(!root) return [];
-    const originalDept=selectedDept;
     const images:{name:string; dataUrl:string}[]=[];
     for(let i=0;i<project.departments.length;i++){
-      setSelectedDept(i);
-      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      images.push({name:project.departments[i].name, dataUrl:await capturePngDataUrl(root)});
+      images.push({name:project.departments[i].name, dataUrl:await captureSlide(i)});
     }
-    setSelectedDept(originalDept);
+    setExportDeptIdx(null);
     return images;
   }
 
@@ -219,8 +238,8 @@ export default function App(){
   }
 
   async function exportImagePptxCurrent(){
-    if(!deptCanvasRef.current) return;
-    const dataUrl=await capturePngDataUrl(deptCanvasRef.current);
+    const dataUrl=await captureSlide(selectedDept);
+    setExportDeptIdx(null);
     await exportImagePptx(project, [{name:dept.name, dataUrl}], dept.name);
   }
 
@@ -275,11 +294,19 @@ export default function App(){
       <div className="export-grid">
         <button disabled={!!exporting} onClick={()=>runExport("pptx-current",()=>exportEditablePptx(project,"current",dept.id))}>PPTX (هذه الإدارة)</button>
         <button disabled={!!exporting} onClick={()=>runExport("pptx-all",()=>exportEditablePptx(project,"all"))}>PPTX (كل الإدارات)</button>
-        <button disabled={!!exporting} onClick={()=>runExport("png",async()=>{ if(deptCanvasRef.current) await exportDepartmentPng(deptCanvasRef.current,`${dept.name}.png`); })}>PNG (هذه الإدارة)</button>
-        <button disabled={!!exporting} onClick={()=>runExport("svg",async()=>{ if(deptCanvasRef.current) await exportDepartmentSvg(deptCanvasRef.current,`${dept.name}.svg`); })}>SVG (هذه الإدارة)</button>
+        <button disabled={!!exporting} onClick={()=>runExport("png",async()=>{
+          setExportDeptIdx(selectedDept); await nextFrame();
+          await exportDepartmentPng(slideEl(),`${dept.name}.png`);
+          setExportDeptIdx(null);
+        })}>PNG (هذه الإدارة)</button>
+        <button disabled={!!exporting} onClick={()=>runExport("svg",async()=>{
+          setExportDeptIdx(selectedDept); await nextFrame();
+          await exportDepartmentSvg(slideEl(),`${dept.name}.svg`);
+          setExportDeptIdx(null);
+        })}>SVG (هذه الإدارة)</button>
         <button disabled={!!exporting} onClick={()=>runExport("pdf-current",async()=>{
-          if(!deptCanvasRef.current) return;
-          const img=await capturePngDataUrl(deptCanvasRef.current);
+          const img=await captureSlide(selectedDept);
+          setExportDeptIdx(null);
           await buildPdfFromImages([img],`${dept.name}.pdf`,theme.pageSize as PageSize);
         })}>PDF (هذه الإدارة)</button>
         <button disabled={!!exporting} onClick={()=>runExport("pdf-all",exportAllPdf)}>PDF (كل الإدارات)</button>
@@ -375,6 +402,14 @@ export default function App(){
       </div>
       <button className="add-panel" onClick={addPanel}>+ لوحة جديدة</button>
     </main>
+
+    <div className="export-stage" ref={exportStageRef} aria-hidden="true">
+      <SlideView
+        project={project}
+        dept={project.departments[exportDeptIdx??selectedDept]||dept}
+        pageIndex={(exportDeptIdx??selectedDept)+1}
+      />
+    </div>
 
     {poppedPanelId && (()=>{
       const panel=dept.panels.find(p=>p.id===poppedPanelId);

@@ -41,7 +41,7 @@ export async function buildPdfFromImages(dataUrls:string[], fileName:string, pag
     const img=await loadImage(dataUrls[i]);
     const scale=Math.min(width/img.width,height/img.height);
     const w=img.width*scale, h=img.height*scale;
-    pdf.addImage(dataUrls[i],"PNG",(width-w)/2,(height-h)/2,w,h);
+    pdf.addImage(dataUrls[i],"PNG",(width-w)/2,(height-h)/2,w,h,undefined,"FAST");
   }
   pdf.save(fileName);
 }
