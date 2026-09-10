@@ -1,9 +1,14 @@
 export type NodeKind = "start"|"process"|"decision"|"exception"|"end";
 export interface SourceRef { page?: string; excerpt?: string; }
 export interface Lane { id:string; name:string; icon?:string; }
+/** Per-shape overrides; anything omitted falls back to the kind's theme default. */
+export interface NodeStyle {
+  fill?:string; stroke?:string; strokeWidth?:number;
+  fontSize?:number; textColor?:string; radius?:number; bold?:boolean;
+}
 export interface FlowNode {
   id:string; x:number; y:number;
-  data:{ label:string; laneId:string; kind:NodeKind; width?:number; height?:number; source?:SourceRef; }
+  data:{ label:string; laneId:string; kind:NodeKind; width?:number; height?:number; source?:SourceRef; style?:NodeStyle; }
 }
 export interface FlowEdge { id:string; source:string; target:string; label?:string; exception?:boolean; }
 export interface Panel {

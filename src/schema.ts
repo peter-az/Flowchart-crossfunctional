@@ -4,12 +4,19 @@ const SourceRefSchema=z.object({page:z.string().optional(),excerpt:z.string().op
 
 const LaneSchema=z.object({id:z.string(),name:z.string(),icon:z.string().optional()});
 
+const NodeStyleSchema=z.object({
+  fill:z.string().optional(), stroke:z.string().optional(), strokeWidth:z.number().optional(),
+  fontSize:z.number().optional(), textColor:z.string().optional(), radius:z.number().optional(),
+  bold:z.boolean().optional()
+});
+
 const FlowNodeSchema=z.object({
   id:z.string(),x:z.number(),y:z.number(),
   data:z.object({
     label:z.string(),laneId:z.string(),kind:z.enum(["start","process","decision","exception","end"]),
     width:z.number().optional(),height:z.number().optional(),
-    source:SourceRefSchema.optional()
+    source:SourceRefSchema.optional(),
+    style:NodeStyleSchema.optional()
   })
 });
 

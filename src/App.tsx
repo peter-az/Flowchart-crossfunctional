@@ -13,6 +13,9 @@ import PanelCanvas from "./flow/PanelCanvas";
 import LegendBar from "./flow/LegendBar";
 import SlideView from "./export/SlideView";
 import {useMediaQuery, MOBILE_QUERY} from "./useMediaQuery";
+import ShapePalette from "./flow/ShapePalette";
+import {resolveShapeStyle} from "./flow/shapeStyle";
+import type {NodeStyle} from "./types";
 import "./styles.css";
 
 let uid=1;
@@ -56,6 +59,14 @@ export default function App(){
 
   const isMobile=useMediaQuery(MOBILE_QUERY);
   const [mobileTab,setMobileTab]=useState<"tools"|"chart"|"props">("chart");
+  const [dark,setDark]=useState(()=>{
+    try{ return localStorage.getItem("flowchart-studio-theme")==="dark"; }catch{ return false; }
+  });
+
+  useEffect(()=>{
+    document.documentElement.dataset.appTheme=dark?"dark":"light";
+    try{ localStorage.setItem("flowchart-studio-theme",dark?"dark":"light"); }catch{ /* ignore */ }
+  },[dark]);
 
   const deptCanvasRef=useRef<HTMLDivElement|null>(null);
   const exportStageRef=useRef<HTMLDivElement|null>(null);
@@ -196,6 +207,15 @@ export default function App(){
     updatePanel(dept.id,panel.id,{...panel, nodes:panel.nodes.map(n=>n.id===node.id?{...n,data:{...n.data,...patch}}:n)});
   }
 
+  /** Merges formatting overrides onto the selected shape; `null` clears them back to the kind default. */
+  function updateSelectedNodeStyle(patch:Partial<NodeStyle>|null){
+    const found=findSelectedNode(); if(!found) return;
+    const {panel,node}=found;
+    updatePanel(dept.id,panel.id,{...panel, nodes:panel.nodes.map(n=>n.id!==node.id?n:{
+      ...n, data:{...n.data, style: patch===null ? undefined : {...n.data.style, ...patch}}
+    })});
+  }
+
   function goToIssue(issue:ValidationIssue){
     const di=project.departments.findIndex(d=>d.id===issue.deptId);
     if(di>=0) setSelectedDept(di);
@@ -267,7 +287,12 @@ export default function App(){
       <div className="toolbar-row">
         <button disabled={!canUndo} onClick={undo} title="Undo (Ctrl+Z)">↶ تراجع</button>
         <button disabled={!canRedo} onClick={redo} title="Redo (Ctrl+Shift+Z)">↷ إعادة</button>
+        <button onClick={()=>setDark(d=>!d)} title="تبديل الوضع الليلي" className="icon-btn">{dark?"☀":"☾"}</button>
       </div>
+
+      <h3>الأشكال</h3>
+      <p className="muted hint">اسحب أي شكل إلى المخطط لإضافته، أو انقر بزر الفأرة الأيمن على المخطط.</p>
+      <ShapePalette fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}/>
 
       <h3>الإدارات</h3>
       <div className="dept-list">
@@ -449,6 +474,41 @@ export default function App(){
             {selected.panel.lanes.map(l=><option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </label>
+        <h4>التنسيق</h4>
+        {(()=>{
+          const s=resolveShapeStyle(selected.node.data.kind,
+            {process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill},
+            selected.node.data.style);
+          return <div className="format-grid">
+            <label className="fmt">التعبئة
+              <input type="color" value={s.fill} onChange={e=>updateSelectedNodeStyle({fill:e.target.value})}/>
+            </label>
+            <label className="fmt">الإطار
+              <input type="color" value={s.stroke} onChange={e=>updateSelectedNodeStyle({stroke:e.target.value})}/>
+            </label>
+            <label className="fmt">لون النص
+              <input type="color" value={s.textColor} onChange={e=>updateSelectedNodeStyle({textColor:e.target.value})}/>
+            </label>
+            <label className="fmt">سُمك الإطار
+              <input type="range" min={1} max={6} step={1} value={s.strokeWidth}
+                onChange={e=>updateSelectedNodeStyle({strokeWidth:Number(e.target.value)})}/>
+            </label>
+            <label className="fmt">حجم الخط
+              <input type="range" min={9} max={22} step={1} value={s.fontSize}
+                onChange={e=>updateSelectedNodeStyle({fontSize:Number(e.target.value)})}/>
+            </label>
+            <label className="fmt">استدارة الزوايا
+              <input type="range" min={0} max={40} step={2} value={Math.min(40,s.radius)}
+                onChange={e=>updateSelectedNodeStyle({radius:Number(e.target.value)})}/>
+            </label>
+            <label className="fmt fmt-check">
+              <input type="checkbox" checked={s.bold} onChange={e=>updateSelectedNodeStyle({bold:e.target.checked})}/>
+              نص عريض
+            </label>
+            <button onClick={()=>updateSelectedNodeStyle(null)}>إعادة التنسيق الافتراضي</button>
+          </div>;
+        })()}
+
         <h4>الاستشهاد بالمصدر</h4>
         <label>رقم الصفحة
           <input value={selected.node.data.source?.page||""} onChange={e=>updateSelectedNodeData({source:{...selected.node.data.source,page:e.target.value}})}/>

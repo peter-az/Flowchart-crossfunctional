@@ -3,6 +3,7 @@ import type {Department, Project} from "./types";
 import {PAGE_SIZES, resolveTheme} from "./themes";
 import {loadImage} from "./exportImage";
 import {LABEL_COL_RATIO} from "./flow/layout";
+import {resolveShapeStyle} from "./flow/shapeStyle";
 
 function hex(c:string){ return c.replace("#",""); }
 
@@ -62,13 +63,13 @@ async function buildPptx(project:Project, departments:Department[]){
 
       panel.nodes.forEach(n=>{
         const kind=n.data.kind;
-        const fill=kind==="decision"?C.decision:kind==="exception"?C.exception:(kind==="start"||kind==="end")?C.start:C.process;
-        const line=kind==="decision"?"E3A10C":kind==="exception"?"EF2B2D":(kind==="start"||kind==="end")?"159447":"2867D4";
+        const s=resolveShapeStyle(kind,{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill},n.data.style);
         const st=kind==="decision"?pptx.ShapeType.diamond:pptx.ShapeType.roundRect;
         const nw=(n.data.width||190)/flowW*cw, nh=(n.data.height||64)/canvasH*bodyH;
         const nx=x+(n.x/flowW)*cw-nw/2, ny=bodyY+(n.y/canvasH)*bodyH-nh/2;
-        slide.addShape(st,{x:nx,y:ny,w:nw,h:nh,fill:{color:fill},line:{color:line,width:1.1}});
-        slide.addText(n.data.label,{x:nx+.03,y:ny+.02,w:nw-.06,h:nh-.04,fontFace:theme.fontFamily,fontSize:8.5,bold:true,color:"17365D",align:"center",valign:"middle",rtlMode:true,margin:.02});
+        slide.addShape(st,{x:nx,y:ny,w:nw,h:nh,fill:{color:hex(s.fill)},line:{color:hex(s.stroke),width:s.strokeWidth*.55}});
+        slide.addText(n.data.label,{x:nx+.03,y:ny+.02,w:nw-.06,h:nh-.04,fontFace:theme.fontFamily,
+          fontSize:s.fontSize*.7,bold:s.bold,color:hex(s.textColor),align:"center",valign:"middle",rtlMode:true,margin:.02});
       });
     });
 

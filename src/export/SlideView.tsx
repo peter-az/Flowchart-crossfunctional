@@ -2,19 +2,15 @@ import type {Department, FlowNode, NodeKind, Panel, Project} from "../types";
 import {PAGE_SIZES, resolveTheme} from "../themes";
 import {canvasSize, flowWidth, LABEL_COL_RATIO} from "../flow/layout";
 import {LaneIcon} from "../flow/icons";
-
-const STROKE:Record<NodeKind,string>={
-  start:"#159447", end:"#159447", process:"#2867D4", decision:"#E3A10C", exception:"#EF2B2D"
-};
+import {resolveShapeStyle} from "../flow/shapeStyle";
 
 const SLIDE_W=1600;
 const PAD=44, MASTHEAD_H=58, TITLE_H=74, PANEL_HEAD_H=38, LEGEND_H=52, FOOTER_H=26, PANEL_GAP=18;
 
 interface Box{ cx:number; cy:number; w:number; h:number; }
 
-function fillFor(kind:NodeKind, t:ReturnType<typeof resolveTheme>){
-  return kind==="decision"?t.decisionFill : kind==="exception"?t.exceptionFill
-    : (kind==="start"||kind==="end")?t.startEndFill : t.processFill;
+function themeFills(t:ReturnType<typeof resolveTheme>){
+  return {process:t.processFill, decision:t.decisionFill, exception:t.exceptionFill, startEnd:t.startEndFill};
 }
 
 /** Elbow path from source node to target node, routing around to the left when the edge runs backwards. */
@@ -99,10 +95,13 @@ function PanelView({panel, theme, accent, bodyH, width}:{
         const box=boxes.get(n.id)!;
         const kind=n.data.kind;
         const shape=kind==="decision"?"diamond":(kind==="start"||kind==="end")?"pill":"rect";
+        const s=resolveShapeStyle(kind,themeFills(theme),n.data.style);
         return <div key={n.id} className={`xslide-node ${shape}`}
           style={{
             left:box.cx-box.w/2, top:box.cy-box.h/2, width:box.w, height:box.h,
-            background:fillFor(kind,theme), borderColor:STROKE[kind]
+            background:s.fill, borderColor:s.stroke, borderWidth:s.strokeWidth,
+            color:s.textColor, fontSize:s.fontSize+1, fontWeight:s.bold?700:500,
+            ...(shape==="rect" ? {borderRadius:s.radius} : null)
           }}>
           <span>{n.data.label.split("\n").map((l,i)=><span key={i} className="xslide-node-line">{l}</span>)}</span>
         </div>;
