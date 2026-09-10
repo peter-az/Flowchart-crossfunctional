@@ -326,37 +326,52 @@ export default function App(){
     </aside>
 
     <main dir="rtl">
-      <div className="page-title">
-        <input className="title-input" value={dept.name} onChange={e=>updateDept(dept.id,{name:e.target.value})}/>
-        <input className="subtitle-input" value={dept.subtitle} onChange={e=>updateDept(dept.id,{subtitle:e.target.value})}/>
-      </div>
-
       <div className="dept-canvas-capture" ref={deptCanvasRef} style={{"--main-blue":theme.mainBlue,"--teal":theme.teal,fontFamily:theme.fontFamily} as React.CSSProperties}>
-      <div className="panels-grid">
-        {dept.panels.map(panel=>
-          panel.id===poppedPanelId
-            ? <div className="panel-block popped-placeholder" key={panel.id}>
-                <div className={`panel-head ${panel.accent}`} style={{background:panel.accent==="teal"?theme.teal:theme.mainBlue}}>
-                  <span>{panel.title}</span>
+        <div className="slide-masthead" dir="ltr">
+          <span className="masthead-label">CROSS-FUNCTIONAL FLOWCHART</span>
+          <div className="masthead-title-block">
+            <input className="masthead-title" value={project.title} onChange={e=>updateProjectField("title",e.target.value)} dir="rtl"/>
+            <input className="masthead-subtitle" value={project.subtitle} onChange={e=>updateProjectField("subtitle",e.target.value)} dir="rtl"/>
+          </div>
+        </div>
+        <hr className="masthead-rule"/>
+
+        <div className="page-title">
+          <input className="title-input" value={dept.name} onChange={e=>updateDept(dept.id,{name:e.target.value})}/>
+          <input className="subtitle-input" value={dept.subtitle} onChange={e=>updateDept(dept.id,{subtitle:e.target.value})}/>
+        </div>
+
+        <div className="panels-grid">
+          {dept.panels.map(panel=>
+            panel.id===poppedPanelId
+              ? <div className="panel-block popped-placeholder" key={panel.id}>
+                  <div className={`panel-head ${panel.accent}`} style={{background:panel.accent==="teal"?theme.teal:theme.mainBlue}}>
+                    <span>{panel.title}</span>
+                  </div>
+                  <button className="restore-btn" onClick={()=>setPoppedPanelId(null)}>↙ موسّعة حاليًا — اضغط للعودة</button>
                 </div>
-                <button className="restore-btn" onClick={()=>setPoppedPanelId(null)}>↙ موسّعة حاليًا — اضغط للعودة</button>
-              </div>
-            : <PanelCanvas
-                key={panel.id}
-                panel={panel}
-                accentColor={panel.accent==="teal"?theme.teal:theme.mainBlue}
-                fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}
-                flaggedNodeIds={new Set(issues.filter(i=>i.panelId===panel.id && i.nodeId).map(i=>i.nodeId!))}
-                onChange={next=>updatePanel(dept.id,panel.id,next)}
-                onSelectNode={nodeId=>setSelectedNode(nodeId?{panelId:panel.id,nodeId}:null)}
-                onDuplicatePanel={()=>duplicatePanel(panel.id)}
-                onDeletePanel={()=>deletePanel(panel.id)}
-                canDeletePanel={dept.panels.length>1}
-                onTogglePopout={()=>setPoppedPanelId(panel.id)}
-              />
-        )}
-      </div>
-      <LegendBar fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}/>
+              : <PanelCanvas
+                  key={panel.id}
+                  panel={panel}
+                  accentColor={panel.accent==="teal"?theme.teal:theme.mainBlue}
+                  fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}
+                  flaggedNodeIds={new Set(issues.filter(i=>i.panelId===panel.id && i.nodeId).map(i=>i.nodeId!))}
+                  onChange={next=>updatePanel(dept.id,panel.id,next)}
+                  onSelectNode={nodeId=>setSelectedNode(nodeId?{panelId:panel.id,nodeId}:null)}
+                  onDuplicatePanel={()=>duplicatePanel(panel.id)}
+                  onDeletePanel={()=>deletePanel(panel.id)}
+                  canDeletePanel={dept.panels.length>1}
+                  onTogglePopout={()=>setPoppedPanelId(panel.id)}
+                />
+          )}
+        </div>
+        <LegendBar fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}/>
+
+        <div className="slide-footer" dir="ltr">
+          <span className="footer-source">Source: {dept.sourcePages?`pages ${dept.sourcePages}`:(project.sourceFileName||"—")}</span>
+          <input className="footer-note" dir="rtl" value={dept.footerNote||""} placeholder="ملاحظة أسفل الصفحة (اختياري)…" onChange={e=>updateDept(dept.id,{footerNote:e.target.value})}/>
+          <span className="footer-page">{selectedDept+1}</span>
+        </div>
       </div>
       <button className="add-panel" onClick={addPanel}>+ لوحة جديدة</button>
     </main>

@@ -28,7 +28,7 @@ const PanelSchema=z.object({
 });
 
 const DepartmentSchema=z.object({
-  id:z.string(),name:z.string(),subtitle:z.string(),sourcePages:z.string().optional(),
+  id:z.string(),name:z.string(),subtitle:z.string(),sourcePages:z.string().optional(),footerNote:z.string().optional(),
   panels:z.array(PanelSchema)
 });
 

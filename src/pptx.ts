@@ -32,7 +32,7 @@ async function buildPptx(project:Project, departments:Department[]){
     slide.addShape(pptx.ShapeType.line,{x:.4,y:.82,w:W-.8,h:0,line:{color:"CDD7E3",width:.7}});
     slide.addText(dept.name,{x:W/2-3.2,y:.9,w:6.4,h:.4,fontFace:theme.fontFamily,fontSize:22,bold:true,color:"0B2A58",align:"center",rtlMode:true});
 
-    const count=Math.max(1,dept.panels.length),gap=.18,totalW=W-.8,pw=(totalW-gap*(count-1))/count,px=.4,py=1.45,ph=H-1.85;
+    const count=Math.max(1,dept.panels.length),gap=.18,totalW=W-.8,pw=(totalW-gap*(count-1))/count,px=.4,py=1.45,ph=H-2.35;
     dept.panels.forEach((panel,pi)=>{
       const x=px+pi*(pw+gap), header=panel.accent==="teal"?C.teal:C.blue;
       const canvasW=panel.canvasWidth||680, canvasH=panel.canvasHeight||Math.max(1,panel.lanes.length)*130;
@@ -71,6 +71,42 @@ async function buildPptx(project:Project, departments:Department[]){
         slide.addText(n.data.label,{x:nx+.03,y:ny+.02,w:nw-.06,h:nh-.04,fontFace:theme.fontFamily,fontSize:8.5,bold:true,color:"17365D",align:"center",valign:"middle",rtlMode:true,margin:.02});
       });
     });
+
+    // Legend row, matching the on-screen legend bar
+    const legendY=H-.78, legendH=.34;
+    slide.addShape(pptx.ShapeType.roundRect,{x:.4,y:legendY,w:W-.8,h:legendH,fill:{color:"FFFFFF",transparency:100},line:{color:"CBD5E1",width:.7,dashType:"dash"}});
+    const legendItems:{shape:"pill"|"rect"|"diamond"|"arrow"; fill?:string; line:string; label:string; dashed?:boolean}[]=[
+      {shape:"pill", fill:C.start, line:"159447", label:"بداية / نهاية"},
+      {shape:"rect", fill:C.process, line:"2867D4", label:"عملية"},
+      {shape:"diamond", fill:C.decision, line:"E3A10C", label:"قرار"},
+      {shape:"rect", fill:C.exception, line:"EF2B2D", label:"رفض / إعادة عمل"},
+      {shape:"arrow", line:"111827", label:"تدفق رئيسي"},
+      {shape:"arrow", line:"EF2B2D", label:"تدفق إعادة عمل / استثناء", dashed:true}
+    ];
+    const legendItemW=(W-.8)/legendItems.length;
+    legendItems.forEach((item,i)=>{
+      const slotX=.4+i*legendItemW;
+      const swatchW=item.shape==="diamond"?.16:(item.shape==="arrow"?.34:.28);
+      const swatchX=slotX+legendItemW-swatchW-.06, swatchY=legendY+legendH/2-.07;
+      if(item.shape==="arrow"){
+        slide.addShape(pptx.ShapeType.line,{x:swatchX,y:swatchY+.07,w:swatchW,h:0,
+          line:{color:item.line,width:1.3,dashType:item.dashed?"dash":"solid",endArrowType:"triangle"}});
+      }else{
+        slide.addShape(item.shape==="diamond"?pptx.ShapeType.diamond:pptx.ShapeType.roundRect,
+          {x:swatchX,y:swatchY,w:swatchW,h:.14,fill:{color:item.fill||"FFFFFF"},line:{color:item.line,width:1.2}});
+      }
+      slide.addText(item.label,{x:slotX,y:legendY,w:legendItemW-swatchW-.14,h:legendH,
+        fontFace:theme.fontFamily,fontSize:7,bold:true,color:"334155",align:"right",valign:"middle",rtlMode:true});
+    });
+
+    // Footer: source citation, optional note, page number
+    const footerY=H-.32;
+    slide.addText(`Source: ${dept.sourcePages?`pages ${dept.sourcePages}`:(project.sourceFileName||"—")}`,
+      {x:.4,y:footerY,w:4,h:.2,fontFace:theme.fontFamily,fontSize:7,color:"94A3B8",align:"left"});
+    if(dept.footerNote){
+      slide.addText(dept.footerNote,{x:4.4,y:footerY,w:W-9.2,h:.2,fontFace:theme.fontFamily,fontSize:7,color:"94A3B8",align:"center",rtlMode:true});
+    }
+    slide.addText(String(departments.indexOf(dept)+1),{x:W-.7,y:footerY,w:.3,h:.2,fontFace:theme.fontFamily,fontSize:7,bold:true,color:"64748B",align:"right"});
   }
   return pptx;
 }

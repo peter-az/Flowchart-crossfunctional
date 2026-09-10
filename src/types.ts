@@ -11,7 +11,7 @@ export interface Panel {
   /** logical canvas size used both for on-screen layout and PPTX coordinate scaling */
   canvasWidth?:number; canvasHeight?:number;
 }
-export interface Department { id:string; name:string; subtitle:string; sourcePages?:string; panels:Panel[]; }
+export interface Department { id:string; name:string; subtitle:string; sourcePages?:string; footerNote?:string; panels:Panel[]; }
 export type ThemeName = "reference"|"mckinsey"|"minimal";
 export type PageSize = "A3"|"A4"|"16:9";
 export interface Theme {
