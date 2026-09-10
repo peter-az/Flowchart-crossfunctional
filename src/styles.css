@@ -101,7 +101,11 @@ summary{cursor:pointer;font-weight:700;color:#0B2A58}
 .popout-close{position:absolute;top:10px;left:10px;z-index:10;padding:6px 10px;background:#fff;border-radius:7px}
 
 /* ---- Export slide (presentation-only render, never shown in the editor) ---- */
-.export-stage{position:absolute;left:-20000px;top:0;pointer-events:none;z-index:-1}
+/* Zero-size clipping wrapper: the slide inside keeps full layout (so it can be captured) while the
+   wrapper adds nothing to the document's scroll area — parking it off-canvas instead made the page
+   scroll thousands of pixels sideways on phones. */
+.export-stage{position:absolute;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:-1}
+.export-stage>.xslide{position:absolute;left:0;top:0}
 .xslide{background:#fff;color:#17365D;box-sizing:border-box;display:flex;flex-direction:column;position:relative}
 .xslide-masthead{display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0}
 .xslide-masthead-label{font-size:15px;font-weight:800;letter-spacing:.06em;color:#5F7190;padding-top:10px}
@@ -185,5 +189,63 @@ summary{cursor:pointer;font-weight:700;color:#0B2A58}
 .issue-overflow-risk,.issue-missing-lane{border-color:#E3A10C}
 .issue-missing-citation,.issue-orphan-node{border-color:#94a3b8}
 
-@media(max-width:1100px){.layout{grid-template-columns:280px 1fr}.right{display:none}}
-@media(max-width:760px){.layout{display:block}aside{position:static;height:auto}.panels-grid{grid-template-columns:1fr}}
+/* Tablet: keep all three panes, just narrower — the properties/validation pane is not optional. */
+@media(max-width:1100px){.layout{grid-template-columns:250px 1fr 270px}}
+
+/* ---- Phone / small tablet: one column at a time, switched by the bottom tab bar ---- */
+@media(max-width:860px){
+  .layout{grid-template-columns:1fr;padding-bottom:60px}
+  h2{font-size:17px;margin-bottom:10px}
+  h3{margin:12px 0 5px}
+  aside,main{position:static;height:auto;max-height:none;border:none}
+  main{padding:10px}
+  aside{padding:12px}
+
+  .layout[data-mtab="chart"] .left,
+  .layout[data-mtab="chart"] .right,
+  .layout[data-mtab="tools"] main,
+  .layout[data-mtab="tools"] .right,
+  .layout[data-mtab="props"] .left,
+  .layout[data-mtab="props"] main{display:none}
+  .layout[data-mtab="props"] .right{display:block}
+
+  .mtabs{position:fixed;left:0;right:0;bottom:0;z-index:900;display:grid;grid-template-columns:repeat(3,1fr);
+    background:#fff;border-top:1px solid #d9e2ec;box-shadow:0 -2px 10px rgba(15,23,42,.08)}
+  .mtabs button{border:none;border-radius:0;background:transparent;padding:9px 4px 10px;font-size:11.5px;font-weight:700;
+    color:#64748b;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:54px;justify-content:center;position:relative}
+  .mtabs button.active{color:#15479C;box-shadow:inset 0 -3px 0 #15479C}
+  .mtab-ico{font-size:17px;line-height:1}
+  .mtab-badge{position:absolute;top:5px;left:calc(50% + 12px);background:#EF2B2D;color:#fff;font-style:normal;
+    font-size:9.5px;font-weight:800;border-radius:999px;padding:1px 5px;min-width:16px;text-align:center}
+
+  /* comfortable tap targets; 16px on real form fields avoids iOS zoom-on-focus, but the
+     in-canvas title/footer fields are display text and must keep their own scale */
+  button{padding:11px 12px;font-size:14px}
+  .dept-row button{padding:10px 8px}
+  aside textarea,aside input,aside select{font-size:16px;padding:10px}
+  .export-grid{grid-template-columns:1fr}
+  .export-grid button{font-size:13.5px;padding:11px 8px}
+
+  /* the editor's slide preview chrome is dead weight on a phone — the export renders its own */
+  .slide-masthead,.masthead-rule,.slide-footer{display:none}
+  .page-title{margin-bottom:6px}
+  .title-input{font-size:17px}
+  .subtitle-input{font-size:11px}
+
+  /* toolbars scroll sideways instead of stacking into a wall of buttons */
+  .panel-toolbar,.lane-toolbar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .panel-toolbar>*,.lane-toolbar>*{flex:0 0 auto}
+  .lane-chip input{width:110px}
+
+  .panels-grid{grid-template-columns:1fr}
+  .rf-canvas{height:68vh!important} /* overrides the desktop pixel height computed inline */
+  .dept-canvas-capture{padding:10px 12px 14px}
+  .masthead-title{font-size:16px}
+  .title-input{font-size:19px}
+  .legend-bar{gap:10px 14px;padding:8px 10px}
+  .legend-item{font-size:10.5px}
+
+  .popout-backdrop{padding:0}
+  .popout-modal{width:100vw;height:100vh;border-radius:0}
+  .popout-close{top:6px;left:6px}
+}

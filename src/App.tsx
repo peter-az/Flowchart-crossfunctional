@@ -12,6 +12,7 @@ import {resolveTheme, THEME_LABELS} from "./themes";
 import PanelCanvas from "./flow/PanelCanvas";
 import LegendBar from "./flow/LegendBar";
 import SlideView from "./export/SlideView";
+import {useMediaQuery, MOBILE_QUERY} from "./useMediaQuery";
 import "./styles.css";
 
 let uid=1;
@@ -52,6 +53,9 @@ export default function App(){
   const [poppedPanelId,setPoppedPanelId]=useState<string|null>(null);
   /** which department the offscreen export slide currently renders (defaults to the selected one) */
   const [exportDeptIdx,setExportDeptIdx]=useState<number|null>(null);
+
+  const isMobile=useMediaQuery(MOBILE_QUERY);
+  const [mobileTab,setMobileTab]=useState<"tools"|"chart"|"props">("chart");
 
   const deptCanvasRef=useRef<HTMLDivElement|null>(null);
   const exportStageRef=useRef<HTMLDivElement|null>(null);
@@ -196,6 +200,7 @@ export default function App(){
     const di=project.departments.findIndex(d=>d.id===issue.deptId);
     if(di>=0) setSelectedDept(di);
     if(issue.panelId && issue.nodeId) setSelectedNode({panelId:issue.panelId,nodeId:issue.nodeId});
+    if(isMobile) setMobileTab("chart");
   }
 
   async function runExport(kind:string, fn:()=>Promise<void>){
@@ -250,7 +255,7 @@ export default function App(){
 
   const selected=findSelectedNode();
 
-  return <div className="layout" dir="ltr">
+  return <div className="layout" dir="ltr" data-mtab={isMobile?mobileTab:undefined}>
     <aside className="left" dir="rtl">
       <h2>Claude Code Flowchart Studio</h2>
 
@@ -464,5 +469,17 @@ export default function App(){
         )}
       </div>
     </aside>
+
+    {isMobile && <nav className="mtabs" dir="rtl">
+      <button className={mobileTab==="tools"?"active":""} onClick={()=>setMobileTab("tools")}>
+        <span className="mtab-ico">☰</span>أدوات
+      </button>
+      <button className={mobileTab==="chart"?"active":""} onClick={()=>setMobileTab("chart")}>
+        <span className="mtab-ico">▦</span>المخطط
+      </button>
+      <button className={mobileTab==="props"?"active":""} onClick={()=>setMobileTab("props")}>
+        <span className="mtab-ico">☑</span>خصائص{issues.length>0 && <em className="mtab-badge">{issues.length}</em>}
+      </button>
+    </nav>}
   </div>;
 }

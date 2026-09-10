@@ -10,6 +10,7 @@ import LaneRowView from "./LaneRowView";
 import FlowEdgeView from "./FlowEdgeView";
 import {canvasSize, flowWidth, laneIndexForY, laneRowY, NODE_H, NODE_W} from "./layout";
 import {ICON_LABELS, type IconKey} from "./icons";
+import {useMediaQuery, TOUCH_QUERY} from "../useMediaQuery";
 
 const nodeTypes={flowNode:FlowNodeView, laneRow:LaneRowView};
 const edgeTypes={flowEdge:FlowEdgeView};
@@ -52,6 +53,9 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
   const {width,height}=canvasSize(panel);
   const flowW=flowWidth(panel);
   const selectedKindRef=useRef<NodeKind>("process");
+  // On touch there is no middle/right button, so the desktop pan bindings would leave the
+  // canvas unpannable and drag-selection would hijack every swipe.
+  const touch=useMediaQuery(TOUCH_QUERY);
 
   const updateNodeLabel=useCallback((nodeId:string,label:string)=>{
     onChange({...panel, nodes:panel.nodes.map(n=>n.id===nodeId?{...n,data:{...n.data,label}}:n)});
@@ -271,9 +275,9 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
           if(removals.length) onChange({...panel, edges:panel.edges.filter(e=>!removals.includes(e.id))});
         }}
         deleteKeyCode={["Backspace","Delete"]}
-        selectionOnDrag
+        selectionOnDrag={!touch}
         zoomOnDoubleClick={false}
-        panOnDrag={[1,2]}
+        panOnDrag={touch?true:[1,2]}
         fitView
         fitViewOptions={{padding:0.06}}
         minZoom={0.2}
