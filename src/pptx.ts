@@ -1,6 +1,7 @@
 import pptxgen from "pptxgenjs";
 import type {Department, Project} from "./types";
 import {PAGE_SIZES, resolveTheme} from "./themes";
+import {loadImage} from "./exportImage";
 
 function hex(c:string){ return c.replace("#",""); }
 
@@ -79,4 +80,34 @@ export async function exportEditablePptx(project:Project, scope:"current"|"all"=
   const pptx=await buildPptx(project,departments);
   const suffix=scope==="current" ? (departments[0]?.name||"department") : "all-departments";
   await pptx.writeFile({fileName:`flowchart-${suffix}.pptx`});
+}
+
+/**
+ * Alternate export mode, only used when explicitly chosen: each department is first
+ * rasterized to a PNG (same capture used for the PNG/PDF export) and that image is
+ * embedded full-slide, instead of drawing native PptxGenJS shapes. This preserves
+ * exact on-screen appearance (including icons/visuals CSS can render that native
+ * PPTX shapes can't easily reproduce) at the cost of the slide no longer being
+ * editable — the CLAUDE.md contract requires native editable PPTX by default and
+ * only allows this flattened form when the user explicitly asks for it.
+ */
+export async function exportImagePptx(project:Project, images:{name:string; dataUrl:string}[], fileNameSuffix:string){
+  const theme=resolveTheme(project.theme);
+  const layout=PAGE_SIZES[theme.pageSize];
+
+  const pptx=new pptxgen();
+  pptx.defineLayout({name:layout.name, width:layout.width, height:layout.height});
+  pptx.layout=layout.name;
+  pptx.rtlMode=true;
+
+  for(const {dataUrl} of images){
+    const img=await loadImage(dataUrl);
+    const slide=pptx.addSlide();
+    slide.background={color:"FFFFFF"};
+    const scale=Math.min(layout.width/img.width, layout.height/img.height);
+    const w=img.width*scale, h=img.height*scale;
+    slide.addImage({data:dataUrl, x:(layout.width-w)/2, y:(layout.height-h)/2, w, h});
+  }
+
+  await pptx.writeFile({fileName:`flowchart-image-${fileNameSuffix}.pptx`});
 }

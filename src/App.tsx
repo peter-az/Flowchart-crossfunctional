@@ -3,7 +3,7 @@ import {defaultProject} from "./defaultProject";
 import type {Department, PageSize, Panel, Project, ThemeName} from "./types";
 import {extractDocx, buildClaudePrompt} from "./docx";
 import {ProjectSchema} from "./schema";
-import {exportEditablePptx} from "./pptx";
+import {exportEditablePptx, exportImagePptx} from "./pptx";
 import {exportDepartmentPng, exportDepartmentSvg, capturePngDataUrl, buildPdfFromImages} from "./exportImage";
 import {useHistory} from "./history";
 import {loadAutosave, saveAutosave, clearAutosave} from "./storage";
@@ -14,6 +14,21 @@ import "./styles.css";
 
 let uid=1;
 const nextId=(prefix:string)=>`${prefix}${Date.now().toString(36)}${(uid++).toString(36)}`;
+
+function summarizeProject(p:Project){
+  let nodes=0, edges=0, panels=0;
+  for(const d of p.departments) for(const pn of d.panels){ panels++; nodes+=pn.nodes.length; edges+=pn.edges.length; }
+  return {departments:p.departments.length, panels, nodes, edges};
+}
+
+function parseProjectJson(text:string):{ok:true; project:Project} | {ok:false; error:string}{
+  try{
+    const parsed=ProjectSchema.parse(JSON.parse(text));
+    return {ok:true, project:parsed as Project};
+  }catch(e){
+    return {ok:false, error:e instanceof Error?e.message:String(e)};
+  }
+}
 
 function loadInitialProject():{project:Project; restored:boolean}{
   const auto=loadAutosave();
@@ -30,7 +45,9 @@ export default function App(){
   const [selectedNode,setSelectedNode]=useState<{panelId:string; nodeId:string}|null>(null);
   const [sourceText,setSourceText]=useState("");
   const [jsonText,setJsonText]=useState("");
+  const [docxJsonText,setDocxJsonText]=useState("");
   const [exporting,setExporting]=useState<string|null>(null);
+  const [poppedPanelId,setPoppedPanelId]=useState<string|null>(null);
 
   const deptCanvasRef=useRef<HTMLDivElement|null>(null);
 
@@ -38,6 +55,7 @@ export default function App(){
   const theme=resolveTheme(project.theme);
   const prompt=useMemo(()=>sourceText?buildClaudePrompt(sourceText):"",[sourceText]);
   const issues=useMemo(()=>validateProject(project),[project]);
+  const docxPreview=useMemo(()=>docxJsonText.trim()?parseProjectJson(docxJsonText):null,[docxJsonText]);
 
   // autosave (debounced)
   useEffect(()=>{
@@ -57,6 +75,14 @@ export default function App(){
     return ()=>window.removeEventListener("keydown",onKey);
   },[undo,redo]);
 
+  // Esc closes the popped-out panel canvas
+  useEffect(()=>{
+    if(!poppedPanelId) return;
+    function onKey(e:KeyboardEvent){ if(e.key==="Escape") setPoppedPanelId(null); }
+    window.addEventListener("keydown",onKey);
+    return ()=>window.removeEventListener("keydown",onKey);
+  },[poppedPanelId]);
+
   async function upload(f:File){
     const text=await extractDocx(f);
     setSourceText(text);
@@ -64,10 +90,15 @@ export default function App(){
   }
 
   function importJson(){
-    try{
-      const parsed=ProjectSchema.parse(JSON.parse(jsonText));
-      setProject(parsed as Project); setSelectedDept(0); setSelectedNode(null);
-    }catch(e){ alert("JSON غير صالح أو لا يطابق الـ schema:\n"+(e instanceof Error?e.message:String(e))); }
+    const result=parseProjectJson(jsonText);
+    if(!result.ok){ alert("JSON غير صالح أو لا يطابق الـ schema:\n"+result.error); return; }
+    setProject(result.project); setSelectedDept(0); setSelectedNode(null);
+  }
+
+  function insertDocxJson(){
+    if(!docxPreview || !docxPreview.ok) return;
+    setProject(docxPreview.project); setSelectedDept(0); setSelectedNode(null);
+    setDocxJsonText("");
   }
 
   function exportJson(){
@@ -168,17 +199,33 @@ export default function App(){
     finally{ setExporting(null); }
   }
 
-  async function exportAllPdf(){
-    const root=deptCanvasRef.current; if(!root) return;
+  async function captureAllDepartmentImages(){
+    const root=deptCanvasRef.current; if(!root) return [];
     const originalDept=selectedDept;
-    const images:string[]=[];
+    const images:{name:string; dataUrl:string}[]=[];
     for(let i=0;i<project.departments.length;i++){
       setSelectedDept(i);
       await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      images.push(await capturePngDataUrl(root));
+      images.push({name:project.departments[i].name, dataUrl:await capturePngDataUrl(root)});
     }
     setSelectedDept(originalDept);
-    await buildPdfFromImages(images, `flowchart-all-departments.pdf`, theme.pageSize as PageSize);
+    return images;
+  }
+
+  async function exportAllPdf(){
+    const images=await captureAllDepartmentImages();
+    await buildPdfFromImages(images.map(i=>i.dataUrl), `flowchart-all-departments.pdf`, theme.pageSize as PageSize);
+  }
+
+  async function exportImagePptxCurrent(){
+    if(!deptCanvasRef.current) return;
+    const dataUrl=await capturePngDataUrl(deptCanvasRef.current);
+    await exportImagePptx(project, [{name:dept.name, dataUrl}], dept.name);
+  }
+
+  async function exportImagePptxAll(){
+    const images=await captureAllDepartmentImages();
+    await exportImagePptx(project, images, "all-departments");
   }
 
   const selected=findSelectedNode();
@@ -236,15 +283,37 @@ export default function App(){
         })}>PDF (هذه الإدارة)</button>
         <button disabled={!!exporting} onClick={()=>runExport("pdf-all",exportAllPdf)}>PDF (كل الإدارات)</button>
       </div>
+      <p className="muted export-note">PPTX بالصور: يعالج المخطط كصورة ثم يضعه داخل الشريحة (غير قابل للتعديل داخل PowerPoint) — استخدمه فقط إذا كنت تريد الشكل المرئي بالضبط.</p>
+      <div className="export-grid">
+        <button disabled={!!exporting} onClick={()=>runExport("pptx-img-current",exportImagePptxCurrent)}>PPTX بالصور (هذه الإدارة)</button>
+        <button disabled={!!exporting} onClick={()=>runExport("pptx-img-all",exportImagePptxAll)}>PPTX بالصور (كل الإدارات)</button>
+      </div>
       {exporting && <p className="muted">جارٍ التصدير…</p>}
 
-      <details>
+      <details open={!!docxJsonText}>
         <summary>استخراج من DOCX</summary>
         <input type="file" accept=".docx" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0])}/>
         <label>النص المستخرج (يمكن اختيار/تقليم القسم الخاص بإدارة معينة)</label>
         <textarea rows={8} value={sourceText} onChange={e=>setSourceText(e.target.value)} placeholder="سيظهر نص DOCX هنا بعد الرفع…"/>
         <textarea rows={10} readOnly value={prompt} placeholder="Claude prompt سيظهر هنا"/>
         <button onClick={()=>navigator.clipboard.writeText(prompt)} disabled={!prompt}>نسخ الـ Prompt</button>
+
+        <label>الصق ناتج Claude (JSON) هنا للإدراج المباشر</label>
+        <textarea rows={10} value={docxJsonText} onChange={e=>setDocxJsonText(e.target.value)} placeholder='الصق JSON المطابق لِـ Project schema…'/>
+        {docxPreview && !docxPreview.ok && <p className="json-error">⚠ {docxPreview.error}</p>}
+        {docxPreview && docxPreview.ok && (()=>{
+          const before=summarizeProject(project), after=summarizeProject(docxPreview.project);
+          return <div className="json-diff-preview">
+            <p>سيستبدل هذا المشروع الحالي بالكامل:</p>
+            <ul>
+              <li>الإدارات: {before.departments} → {after.departments}</li>
+              <li>اللوحات: {before.panels} → {after.panels}</li>
+              <li>العقد: {before.nodes} → {after.nodes}</li>
+              <li>الروابط: {before.edges} → {after.edges}</li>
+            </ul>
+          </div>;
+        })()}
+        <button className="primary" onClick={insertDocxJson} disabled={!docxPreview || !docxPreview.ok}>إدراج البيانات الآن</button>
       </details>
 
       <details>
@@ -263,8 +332,38 @@ export default function App(){
 
       <div className="panels-grid" ref={deptCanvasRef} style={{"--main-blue":theme.mainBlue,"--teal":theme.teal,fontFamily:theme.fontFamily} as React.CSSProperties}>
         {dept.panels.map(panel=>
+          panel.id===poppedPanelId
+            ? <div className="panel-block popped-placeholder" key={panel.id}>
+                <div className={`panel-head ${panel.accent}`} style={{background:panel.accent==="teal"?theme.teal:theme.mainBlue}}>
+                  <span>{panel.title}</span>
+                </div>
+                <button className="restore-btn" onClick={()=>setPoppedPanelId(null)}>↙ موسّعة حاليًا — اضغط للعودة</button>
+              </div>
+            : <PanelCanvas
+                key={panel.id}
+                panel={panel}
+                accentColor={panel.accent==="teal"?theme.teal:theme.mainBlue}
+                fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}
+                flaggedNodeIds={new Set(issues.filter(i=>i.panelId===panel.id && i.nodeId).map(i=>i.nodeId!))}
+                onChange={next=>updatePanel(dept.id,panel.id,next)}
+                onSelectNode={nodeId=>setSelectedNode(nodeId?{panelId:panel.id,nodeId}:null)}
+                onDuplicatePanel={()=>duplicatePanel(panel.id)}
+                onDeletePanel={()=>deletePanel(panel.id)}
+                canDeletePanel={dept.panels.length>1}
+                onTogglePopout={()=>setPoppedPanelId(panel.id)}
+              />
+        )}
+      </div>
+      <button className="add-panel" onClick={addPanel}>+ لوحة جديدة</button>
+    </main>
+
+    {poppedPanelId && (()=>{
+      const panel=dept.panels.find(p=>p.id===poppedPanelId);
+      if(!panel) return null;
+      return <div className="popout-backdrop" onClick={()=>setPoppedPanelId(null)}>
+        <div className="popout-modal" dir="rtl" onClick={e=>e.stopPropagation()}>
+          <button className="popout-close" onClick={()=>setPoppedPanelId(null)} title="إغلاق (Esc)">✕</button>
           <PanelCanvas
-            key={panel.id}
             panel={panel}
             accentColor={panel.accent==="teal"?theme.teal:theme.mainBlue}
             fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}
@@ -274,11 +373,11 @@ export default function App(){
             onDuplicatePanel={()=>duplicatePanel(panel.id)}
             onDeletePanel={()=>deletePanel(panel.id)}
             canDeletePanel={dept.panels.length>1}
+            expanded
           />
-        )}
-      </div>
-      <button className="add-panel" onClick={addPanel}>+ لوحة جديدة</button>
-    </main>
+        </div>
+      </div>;
+    })()}
 
     <aside className="right" dir="rtl">
       <h3>خصائص العنصر المحدد</h3>

@@ -23,7 +23,7 @@ export async function capturePngDataUrl(el:HTMLElement){
   return toPng(el,{backgroundColor:"#ffffff",pixelRatio:2});
 }
 
-function loadImage(src:string):Promise<HTMLImageElement>{
+export function loadImage(src:string):Promise<HTMLImageElement>{
   return new Promise((resolve,reject)=>{
     const img=new Image();
     img.onload=()=>resolve(img);

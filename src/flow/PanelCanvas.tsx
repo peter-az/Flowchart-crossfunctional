@@ -37,13 +37,17 @@ export interface PanelCanvasProps{
   onDuplicatePanel:()=>void;
   onDeletePanel:()=>void;
   canDeletePanel:boolean;
+  /** true when rendered inside the popout modal (fills the modal body height instead of a fixed card height) */
+  expanded?:boolean;
+  /** omitted (no button shown) when this instance is itself inside the popout modal */
+  onTogglePopout?:()=>void;
 }
 
 export default function PanelCanvas(props:PanelCanvasProps){
   return <ReactFlowProvider><PanelCanvasInner {...props}/></ReactFlowProvider>;
 }
 
-function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSelectNode,onDuplicatePanel,onDeletePanel,canDeletePanel}:PanelCanvasProps){
+function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSelectNode,onDuplicatePanel,onDeletePanel,canDeletePanel,expanded,onTogglePopout}:PanelCanvasProps){
   const {width,height}=canvasSize(panel);
   const selectedKindRef=useRef<NodeKind>("process");
 
@@ -189,12 +193,13 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
     onChange({...panel,lanes});
   }
 
-  return <section className="panel-block">
+  return <section className={`panel-block ${expanded?"expanded":""}`}>
     <div className={`panel-head ${panel.accent}`} style={{background:accentColor}}>
       <span>{panel.title}</span>
       <div className="panel-head-actions">
-        <button onClick={onDuplicatePanel} title="Duplicate panel">⧉</button>
-        {canDeletePanel && <button onClick={onDeletePanel} title="Delete panel">✕</button>}
+        {onTogglePopout && <button onClick={onTogglePopout} title="Expand / popout">⤢</button>}
+        {!expanded && <button onClick={onDuplicatePanel} title="Duplicate panel">⧉</button>}
+        {!expanded && canDeletePanel && <button onClick={onDeletePanel} title="Delete panel">✕</button>}
       </div>
     </div>
 
@@ -227,7 +232,7 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
       <button onClick={addLane}>+ Lane</button>
     </div>
 
-    <div className="rf-canvas" style={{height:Math.min(720,height+40)}}>
+    <div className="rf-canvas" style={expanded?undefined:{height:Math.min(720,height+40)}}>
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
