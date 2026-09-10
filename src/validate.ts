@@ -1,5 +1,5 @@
 import type {Project} from "./types";
-import {canvasSize, NODE_H, NODE_W} from "./flow/layout";
+import {canvasSize, flowWidth, NODE_H, NODE_W} from "./flow/layout";
 
 export type IssueKind=
   |"orphan-node"|"broken-edge"|"duplicate-id"|"missing-lane"
@@ -23,7 +23,8 @@ export function validateProject(project:Project):ValidationIssue[]{
     track(dept.id,`department ${dept.name}`);
     for(const panel of dept.panels){
       track(panel.id,`panel ${panel.title} (${dept.name})`);
-      const {width,height}=canvasSize(panel);
+      const {height}=canvasSize(panel);
+      const width=flowWidth(panel);
       const laneIds=new Set(panel.lanes.map(l=>l.id));
       for(const lane of panel.lanes) track(lane.id,`lane ${lane.name} (${panel.title})`);
 

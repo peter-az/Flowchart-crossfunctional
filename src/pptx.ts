@@ -2,6 +2,7 @@ import pptxgen from "pptxgenjs";
 import type {Department, Project} from "./types";
 import {PAGE_SIZES, resolveTheme} from "./themes";
 import {loadImage} from "./exportImage";
+import {LABEL_COL_RATIO} from "./flow/layout";
 
 function hex(c:string){ return c.replace("#",""); }
 
@@ -35,12 +36,13 @@ async function buildPptx(project:Project, departments:Department[]){
     dept.panels.forEach((panel,pi)=>{
       const x=px+pi*(pw+gap), header=panel.accent==="teal"?C.teal:C.blue;
       const canvasW=panel.canvasWidth||680, canvasH=panel.canvasHeight||Math.max(1,panel.lanes.length)*130;
+      const flowW=canvasW*(1-LABEL_COL_RATIO);
 
       slide.addShape(pptx.ShapeType.roundRect,{x,y:py,w:pw,h:ph,fill:{color:"FFFFFF",transparency:100},line:{color:"C4D0DE",width:1}});
       slide.addShape(pptx.ShapeType.rect,{x,y:py,w:pw,h:.34,fill:{color:header},line:{color:header}});
       slide.addText(panel.title,{x,y:py+.02,w:pw,h:.28,fontFace:theme.fontFamily,fontSize:14,bold:true,color:"FFFFFF",align:"center",rtlMode:true});
 
-      const laneW=pw*.25,bodyY=py+.34,bodyH=ph-.34,laneH=bodyH/Math.max(1,panel.lanes.length),cw=pw-laneW;
+      const laneW=pw*LABEL_COL_RATIO,bodyY=py+.34,bodyH=ph-.34,laneH=bodyH/Math.max(1,panel.lanes.length),cw=pw-laneW;
       panel.lanes.forEach((lane,i)=>{
         const ly=bodyY+i*laneH;
         slide.addShape(pptx.ShapeType.rect,{x:x+pw-laneW,y:ly,w:laneW,h:laneH,fill:{color:i%2?"F8FAFC":"F3F6F9"},line:{color:"D9E2EC",width:.5}});
@@ -49,7 +51,7 @@ async function buildPptx(project:Project, departments:Department[]){
 
       panel.edges.forEach(e=>{
         const a=panel.nodes.find(n=>n.id===e.source),b=panel.nodes.find(n=>n.id===e.target); if(!a||!b)return;
-        const ax=x+(a.x/canvasW)*cw, ay=bodyY+(a.y/canvasH)*bodyH, bx=x+(b.x/canvasW)*cw, by=bodyY+(b.y/canvasH)*bodyH;
+        const ax=x+(a.x/flowW)*cw, ay=bodyY+(a.y/canvasH)*bodyH, bx=x+(b.x/flowW)*cw, by=bodyY+(b.y/canvasH)*bodyH;
         slide.addShape(pptx.ShapeType.line,{x:ax,y:ay,w:bx-ax,h:by-ay,
           line:{color:e.exception?"EF2B2D":"111827",width:1,dashType:e.exception?"dash":"solid",endArrowType:"triangle"}});
         if(e.label){
@@ -63,8 +65,8 @@ async function buildPptx(project:Project, departments:Department[]){
         const fill=kind==="decision"?C.decision:kind==="exception"?C.exception:(kind==="start"||kind==="end")?C.start:C.process;
         const line=kind==="decision"?"E3A10C":kind==="exception"?"EF2B2D":(kind==="start"||kind==="end")?"159447":"2867D4";
         const st=kind==="decision"?pptx.ShapeType.diamond:pptx.ShapeType.roundRect;
-        const nw=(n.data.width||190)/canvasW*cw, nh=(n.data.height||64)/canvasH*bodyH;
-        const nx=x+(n.x/canvasW)*cw-nw/2, ny=bodyY+(n.y/canvasH)*bodyH-nh/2;
+        const nw=(n.data.width||190)/flowW*cw, nh=(n.data.height||64)/canvasH*bodyH;
+        const nx=x+(n.x/flowW)*cw-nw/2, ny=bodyY+(n.y/canvasH)*bodyH-nh/2;
         slide.addShape(st,{x:nx,y:ny,w:nw,h:nh,fill:{color:fill},line:{color:line,width:1.1}});
         slide.addText(n.data.label,{x:nx+.03,y:ny+.02,w:nw-.06,h:nh-.04,fontFace:theme.fontFamily,fontSize:8.5,bold:true,color:"17365D",align:"center",valign:"middle",rtlMode:true,margin:.02});
       });

@@ -8,7 +8,8 @@ import type {NodeKind, Panel} from "../types";
 import FlowNodeView from "./FlowNodeView";
 import LaneRowView from "./LaneRowView";
 import FlowEdgeView from "./FlowEdgeView";
-import {canvasSize, laneIndexForY, laneRowY, NODE_H, NODE_W} from "./layout";
+import {canvasSize, flowWidth, laneIndexForY, laneRowY, NODE_H, NODE_W} from "./layout";
+import {ICON_LABELS, type IconKey} from "./icons";
 
 const nodeTypes={flowNode:FlowNodeView, laneRow:LaneRowView};
 const edgeTypes={flowEdge:FlowEdgeView};
@@ -49,6 +50,7 @@ export default function PanelCanvas(props:PanelCanvasProps){
 
 function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSelectNode,onDuplicatePanel,onDeletePanel,canDeletePanel,expanded,onTogglePopout}:PanelCanvasProps){
   const {width,height}=canvasSize(panel);
+  const flowW=flowWidth(panel);
   const selectedKindRef=useRef<NodeKind>("process");
 
   const updateNodeLabel=useCallback((nodeId:string,label:string)=>{
@@ -68,13 +70,20 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
   },[panel,onChange]);
 
   const rfNodes:Node[]=useMemo(()=>{
-    const laneNodes:Node[]=panel.lanes.map((l,i)=>{
+    const labelColW=width-flowW;
+    const laneNodes:Node[]=panel.lanes.flatMap((l,i)=>{
       const row=laneRowY(panel,i);
-      return {
-        id:`lane:${l.id}`, type:"laneRow", position:{x:0,y:row.top},
-        data:{name:l.name,index:i}, draggable:false, selectable:false, connectable:false, focusable:false,
-        width, height:row.height, style:{width,height:row.height,pointerEvents:"none"}, zIndex:0
+      const band:Node={
+        id:`laneband:${l.id}`, type:"laneRow", position:{x:0,y:row.top},
+        data:{variant:"band",index:i}, draggable:false, selectable:false, connectable:false, focusable:false,
+        width:flowW, height:row.height, style:{width:flowW,height:row.height,pointerEvents:"none"}, zIndex:0
       };
+      const label:Node={
+        id:`lanelabel:${l.id}`, type:"laneRow", position:{x:flowW,y:row.top},
+        data:{variant:"label",name:l.name,icon:l.icon,index:i}, draggable:false, selectable:false, connectable:false, focusable:false,
+        width:labelColW, height:row.height, style:{width:labelColW,height:row.height,pointerEvents:"none"}, zIndex:0
+      };
+      return [band,label];
     });
     const flowNodes:Node[]=panel.nodes.map(n=>{
       const w=n.data.width||NODE_W, h=n.data.height||NODE_H;
@@ -91,7 +100,7 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
       };
     });
     return [...laneNodes,...flowNodes];
-  },[panel,fills,flaggedNodeIds,width,updateNodeLabel,updateNodeResize]);
+  },[panel,fills,flaggedNodeIds,width,flowW,updateNodeLabel,updateNodeResize]);
 
   const rfEdges:Edge[]=useMemo(()=>panel.edges.map(e=>({
     id:e.id, source:e.source, target:e.target, type:"flowEdge", zIndex:5,
@@ -115,11 +124,11 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
     const centerX=node.position.x+w/2, centerY=node.position.y+h/2;
     const laneIdx=laneIndexForY(panel,centerY);
     const snapCenterY=laneRowY(panel,laneIdx).center;
-    const clampedX=Math.min(width-w/2,Math.max(w/2,centerX));
+    const clampedX=Math.min(flowW-w/2,Math.max(w/2,centerX));
     onChange({...panel, nodes:panel.nodes.map(n=>n.id===node.id
       ? {...n, x:Math.round(clampedX), y:Math.round(snapCenterY), data:{...n.data, laneId:panel.lanes[laneIdx]?.id||n.data.laneId}}
       : n)});
-  },[panel,onChange,width]);
+  },[panel,onChange,flowW]);
 
   const onNodeClick:NodeMouseHandler=useCallback((_evt,node)=>{
     if(node.type==="flowNode") onSelectNode(node.id);
@@ -131,7 +140,7 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
     const laneId=panel.lanes[0]?.id||"";
     const id=nextId("n");
     const defaultLabel:Record<NodeKind,string>={start:"بداية",process:"خطوة جديدة",decision:"سؤال؟",exception:"استثناء",end:"نهاية"};
-    onChange({...panel, nodes:[...panel.nodes,{id,x:width/2,y:laneRowY(panel,0).center,data:{label:defaultLabel[kind],laneId,kind}}]});
+    onChange({...panel, nodes:[...panel.nodes,{id,x:flowW/2,y:laneRowY(panel,0).center,data:{label:defaultLabel[kind],laneId,kind}}]});
   }
 
   function deleteSelected(){
@@ -180,6 +189,9 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
   function renameLane(laneId:string,name:string){
     onChange({...panel, lanes:panel.lanes.map(l=>l.id===laneId?{...l,name}:l)});
   }
+  function setLaneIcon(laneId:string,icon:string){
+    onChange({...panel, lanes:panel.lanes.map(l=>l.id===laneId?{...l,icon:icon||undefined}:l)});
+  }
   function deleteLane(laneId:string){
     if(panel.lanes.length<=1) return;
     onChange({...panel, lanes:panel.lanes.filter(l=>l.id!==laneId)});
@@ -223,6 +235,10 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
     <div className="lane-toolbar">
       {panel.lanes.map((l,i)=>
         <div className="lane-chip" key={l.id}>
+          <select value={l.icon||""} onChange={e=>setLaneIcon(l.id,e.target.value)} title="Lane icon" className="lane-icon-select">
+            <option value="">—</option>
+            {(Object.keys(ICON_LABELS) as IconKey[]).map(k=><option key={k} value={k}>{ICON_LABELS[k]}</option>)}
+          </select>
           <input value={l.name} onChange={e=>renameLane(l.id,e.target.value)}/>
           <button disabled={i===0} onClick={()=>moveLane(l.id,-1)} title="Move up">↑</button>
           <button disabled={i===panel.lanes.length-1} onClick={()=>moveLane(l.id,1)} title="Move down">↓</button>
@@ -258,7 +274,9 @@ function PanelCanvasInner({panel,accentColor,fills,flaggedNodeIds,onChange,onSel
         selectionOnDrag
         zoomOnDoubleClick={false}
         panOnDrag={[1,2]}
-        minZoom={0.4}
+        fitView
+        fitViewOptions={{padding:0.06}}
+        minZoom={0.2}
         maxZoom={2}
         proOptions={{hideAttribution:true}}
         translateExtent={[[-40,-40],[width+40,height+40]]}

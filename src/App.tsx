@@ -10,6 +10,7 @@ import {loadAutosave, saveAutosave, clearAutosave} from "./storage";
 import {validateProject, type ValidationIssue} from "./validate";
 import {resolveTheme, THEME_LABELS} from "./themes";
 import PanelCanvas from "./flow/PanelCanvas";
+import LegendBar from "./flow/LegendBar";
 import "./styles.css";
 
 let uid=1;
@@ -330,7 +331,8 @@ export default function App(){
         <input className="subtitle-input" value={dept.subtitle} onChange={e=>updateDept(dept.id,{subtitle:e.target.value})}/>
       </div>
 
-      <div className="panels-grid" ref={deptCanvasRef} style={{"--main-blue":theme.mainBlue,"--teal":theme.teal,fontFamily:theme.fontFamily} as React.CSSProperties}>
+      <div className="dept-canvas-capture" ref={deptCanvasRef} style={{"--main-blue":theme.mainBlue,"--teal":theme.teal,fontFamily:theme.fontFamily} as React.CSSProperties}>
+      <div className="panels-grid">
         {dept.panels.map(panel=>
           panel.id===poppedPanelId
             ? <div className="panel-block popped-placeholder" key={panel.id}>
@@ -353,6 +355,8 @@ export default function App(){
                 onTogglePopout={()=>setPoppedPanelId(panel.id)}
               />
         )}
+      </div>
+      <LegendBar fills={{process:theme.processFill,decision:theme.decisionFill,exception:theme.exceptionFill,startEnd:theme.startEndFill}}/>
       </div>
       <button className="add-panel" onClick={addPanel}>+ لوحة جديدة</button>
     </main>

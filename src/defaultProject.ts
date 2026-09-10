@@ -9,10 +9,10 @@ export const defaultProject:Project={
       id:"contributions",title:"1. المساهمات",accent:"blue",
       canvasWidth:640,canvasHeight:720,
       lanes:[
-        {id:"emp",name:"الموظف / مقدم الطلب"},
-        {id:"maker",name:"إدارة الاسترداد النقدي - Maker"},
-        {id:"reviewer",name:"إدارة الاسترداد النقدي - Reviewer"},
-        {id:"payroll",name:"قطاع الأجور والمزايا"}
+        {id:"emp",name:"الموظف / مقدم الطلب",icon:"person"},
+        {id:"maker",name:"إدارة الاسترداد النقدي - Maker",icon:"gear"},
+        {id:"reviewer",name:"إدارة الاسترداد النقدي - Reviewer",icon:"search"},
+        {id:"payroll",name:"قطاع الأجور والمزايا",icon:"group"}
       ],
       nodes:[
         {id:"n1",x:300,y:60,data:{label:"بداية\nتقديم الطلب",laneId:"emp",kind:"start"}},
